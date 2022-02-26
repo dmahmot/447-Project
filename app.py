@@ -26,6 +26,9 @@ def request():
     data_infect = pd.read_csv(CSV_INFECT)
     #data_vaccine = pd.read_csv(csv_vaccine)
 
+    # drop the OBJECTID column
+    data_infect = data_infect.drop('OBJECTID', axis=1)
+
 
 def print_data(dataframe):
     """
@@ -37,7 +40,17 @@ def print_data(dataframe):
     # temp: print first 5 rows of dataframe
     print(dataframe.head(5))
 
+def calc_rate(dataframe):
+    """
+    Calculates rate
+    :param dataframe: the chosen dataframe
+    :return:
+    """
+    # infection rate = (# infected / total population) * 100
+    
+
 
 if __name__ == '__main__':
     request()
     print_data(data_infect)
+    calc_rate(data_infect)
