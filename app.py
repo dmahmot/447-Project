@@ -53,8 +53,9 @@ def home_page():
     :return:
     """
     if request.method == 'GET':
-        # load dataframe from csv
-        my_request()
+        if (data_infect is None) and (data_vaccine is None):
+            # load dataframe from csv
+            my_request()
 
         # run home page
         return render_template('home.html', headers=header_infect)
@@ -77,7 +78,7 @@ def select_county(county):
 
     # search for chosen county
     if(search_county_infected(county) is None):
-        return "Could not find data for %s county." % county
+        return "Could not find data for \"%s\" county." % county
 
     # run select page
     #return render_template('select_county.html')
