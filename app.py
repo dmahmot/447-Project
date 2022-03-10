@@ -7,6 +7,7 @@ from flask import *
 # global constants
 URL_INFECT = 'https://opendata.maryland.gov/api/views/tm86-dujs/rows.csv?accessType=DOWNLOAD'
 URL_VACCINE = 'https://opendata.maryland.gov/api/views/4ibg-xizv/rows.csv?accessType=DOWNLOAD'
+URL_TOTAL_POP = 'https://opendata.maryland.gov/api/views/r7ky-rq9s/rows.csv?accessType=DOWNLOAD'
 CSV_INFECT = 'MD_COVID-19_-_Cases_by_County.csv'
 CSV_VACCINE = 'MD_COVID-19_-_Vaccinations_by_County.csv'
 
