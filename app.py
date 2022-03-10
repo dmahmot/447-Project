@@ -2,7 +2,7 @@
 
 import requests             # used for downloading files from websites
 import pandas as pd         # used for csv
-from flask import *         # used for website
+from flask import *
 
 # global constants
 URL_INFECT = 'https://opendata.maryland.gov/api/views/tm86-dujs/rows.csv?accessType=DOWNLOAD'
@@ -23,7 +23,7 @@ data = []
 app = Flask(__name__)
 
 
-def request():
+def my_request():
     """
     Downloads files from online database to populate dataframe
     :return:
@@ -32,8 +32,11 @@ def request():
     global data_infect, data_vaccine, header_infect, header_vaccine
 
     # open and convert csv into a dataframe
-    data_infect = pd.read_csv(CSV_INFECT)
-    data_vaccine = pd.read_csv(CSV_VACCINE)
+    # data_infect = pd.read_csv(CSV_INFECT)
+    # data_vaccine = pd.read_csv(CSV_VACCINE)
+
+    data_infect = pd.read_csv(URL_INFECT)
+    data_vaccine = pd.read_csv(URL_VACCINE)
 
     # drop the OBJECTID column in CSV_INFECT
     data_infect = data_infect.drop('OBJECTID', axis=1)
@@ -43,45 +46,53 @@ def request():
     header_vaccine = data_vaccine.columns
 
 
-@app.route('/')
+@app.route('/', methods=('GET', 'POST'))
 def home_page():
     """
     Link to home page
     :return:
     """
-    # load dataframe from csv
-    request()
+    if request.method == 'GET':
+        # load dataframe from csv
+        my_request()
 
-    # run home page
-    return render_template('home.html')
+        # run home page
+        return render_template('home.html', headers=header_infect)
+    
+    else:
+        countyfrominput = request.form['county']
+        return redirect(url_for("select_county", county=countyfrominput))
 
 
-@app.route('/get/county')
-def select_county():
+@app.route('/get/<county>', methods=('GET', 'POST'))
+def select_county(county):
     """
     Link to select county
     :return:
     """
+
+
     # chosen county
-    county = 'Baltimore'
+    # county = "Baltimore"
 
     # search for chosen county
-    search_county_infected(county)
+    if(search_county_infected(county) is None):
+        return "Could not find data for %s county." % county
 
     # run select page
     #return render_template('select_county.html')
 
     # for now send directly to county dataframe page
-    return redirect('/get/county/county_name')
+    return redirect(url_for('county', county=county))
 
 
-@app.route('/get/county/county_name')
-def county():
+@app.route('/get/county/<county>')
+def county(county):
     """
     Link to county dataframe
     :return:
     """
-    return render_template('county.html', headings=headings, data=data)
+    return render_template('county.html', headings=headings, data=data, county=county)
 
 
 def calc_county_infected(county, dataframe):
@@ -126,8 +137,10 @@ def search_county_infected(county):
 
         # print dataframe of chosen county
         calc_county_infected(county, data_county)
+
+        return 1
     else:
-        print("Error: County not valid")
+        return None
 
 
 if __name__ == '__main__':
