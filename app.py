@@ -32,8 +32,11 @@ def my_request():
     global data_infect, data_vaccine, header_infect, header_vaccine
 
     # open and convert csv into a dataframe
-    data_infect = pd.read_csv(CSV_INFECT)
-    data_vaccine = pd.read_csv(CSV_VACCINE)
+    # data_infect = pd.read_csv(CSV_INFECT)
+    # data_vaccine = pd.read_csv(CSV_VACCINE)
+
+    data_infect = pd.read_csv(URL_INFECT)
+    data_vaccine = pd.read_csv(URL_VACCINE)
 
     # drop the OBJECTID column in CSV_INFECT
     data_infect = data_infect.drop('OBJECTID', axis=1)
@@ -54,7 +57,7 @@ def home_page():
         my_request()
 
         # run home page
-        return render_template('home.html')
+        return render_template('home.html', headers=header_infect)
     
     else:
         countyfrominput = request.form['county']

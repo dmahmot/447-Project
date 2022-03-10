@@ -11,9 +11,18 @@
         <h1> Maryland COVID-19 Dashboard </h1>
         <!--"#" returns to same page. But the method will be checked back in-->
         <form action="#" method="post"> 
-            <input type="text" name="county" placeholder="Select County" required />
+            <!-- <input type="text" name="county" placeholder="Select County" required />
+            <input type="submit" value="Search"/> -->
+
+            <input type="text" name="county" placeholder="Select County" list="counties" required />
             <input type="submit" value="Search"/>
         </form>
+
+        <datalist id="counties">
+            {% for header in headers %}
+            <option value={{header}}> {{header}} </option>
+            {% endfor %}
+        </datalist>
     </div>
 </body>
 </html>
