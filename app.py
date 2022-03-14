@@ -23,6 +23,9 @@ data = []
 
 app = Flask(__name__)
 
+# secret_key needs to be set to use session - message flashing uses session
+app.secret_key = "meaningless text"
+
 
 def my_request():
     """
@@ -79,7 +82,6 @@ def select_county(county):
 
     # search for chosen county
     if(search_county_infected(county) is None):
-        # return "Could not find data for \"%s\" county." % county 
         return redirect(url_for('county_error', county=county))
 
 
@@ -103,7 +105,10 @@ def county(county):
 @app.route('/county_error/<county>')
 def county_error(county):
     
-    return render_template('county_error.html', county=county)
+    # flashes error message to user after redirect to homepage
+    flash("Whoops! Couldn't find '%s' county in the database." % county, 'error')
+    return redirect(url_for('home_page'))
+
 
 def calc_county_infected(county, dataframe):
     """
@@ -155,4 +160,4 @@ def search_county_infected(county):
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

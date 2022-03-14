@@ -11,10 +11,14 @@
         <h1> Maryland COVID-19 Dashboard </h1>
         <!--"#" returns to same page. But the method will be checked back in-->
         <form action="#" method="post"> 
-            <!-- old search bar -->
-            <!-- <input type="text" name="county" placeholder="Select County" required />
-            <input type="submit" value="Search"/> -->
-
+            {% with messages = get_flashed_messages() %}           
+                {% if messages %}
+                    {% for message in messages %}
+                        {{ message }} <br><br>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
             <input type="text" name="county" placeholder="Select County" list="counties" required />
             <input type="submit" value="Search"/>
         </form>
