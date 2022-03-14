@@ -79,7 +79,10 @@ def select_county(county):
 
     # search for chosen county
     if(search_county_infected(county) is None):
-        return "Could not find data for \"%s\" county." % county
+        # return "Could not find data for \"%s\" county." % county 
+        return redirect(url_for('county_error', county=county))
+
+
 
     # run select page
     #return render_template('select_county.html')
@@ -96,6 +99,11 @@ def county(county):
     """
     return render_template('county.html', headings=headings, data=data, county=county)
 
+
+@app.route('/county_error/<county>')
+def county_error(county):
+    
+    return render_template('county_error.html', county=county)
 
 def calc_county_infected(county, dataframe):
     """
@@ -120,6 +128,7 @@ def calc_county_infected(county, dataframe):
         ('Cumulative cases', str(cumulative)),
         ('Last 7 days', str(last_7))
     ]
+
 
 
 def search_county_infected(county):
