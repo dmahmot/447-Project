@@ -1,15 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/static/styles.css" />
-    <title>Table</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block content %}
     <div class="container">
         <h1> Maryland COVID-19 Dashboard </h1>
-        <!--"#" returns to same page. But the method will be checked back in-->
         <form action="#" method="post"> 
             {% with messages = get_flashed_messages() %}           
                 {% if messages %}
@@ -22,7 +15,7 @@
             <input type="text" name="county" placeholder="Select County" list="counties" required />
             <input type="submit" value="Search"/>
         </form>
-
+        
         <!-- list for search bar to suggest/autofill -->
         <datalist id="counties">
             {% for header in headers %}
@@ -30,5 +23,4 @@
             {% endfor %}
         </datalist>
     </div>
-</body>
-</html>
+{% endblock %}

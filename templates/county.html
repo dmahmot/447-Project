@@ -1,29 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="/static/styles.css" />
-    <title>Table</title>
-</head>
-<body>
-    <div class="container">
-        <h1> {{ county }} County Data </h1>
-        <table class="table">
-            <tr class="table__header">
-                {% for header in headings %}
-                <th class="table__cell">{{ header }}</th>
-                {% endfor %}
-            </tr>
-            {% for row in data %}
-            <tr class="table__row">
-                {% for cell in row %}
-                <td class="table__cell">{{ cell }}</td>
-                {% endfor %}
-            </tr>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1> {{ county }} County Data </h1>
+    <table class="table">
+        <tr class="table__header">
+            {% for header in headings %}
+            <th class="table__cell">{{ header }}</th>
             {% endfor %}
-        </table>
-        <a href="/"> <button>Back to Home</button></a>
-    </div>
-</body>
-</html>
+        </tr>
+        {% for row in data %}
+        <tr class="table__row">
+            {% for cell in row %}
+            <td class="table__cell">{{ cell }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    <a href="/"> <button>Back to Home</button></a>
+</div>
+{% endblock %}

@@ -1,11 +1,11 @@
 .table {
     border-spacing: 0;
     margin: 1rem;
-    background-color: darkseagreen;
+    background-color: rgba(15, 142, 228, 0.8);
 }
 
 .table__row:nth-child(even) {
-    background-color: #cbdfb6;
+    background-color: #9bc1ec;
 }
 
 .table__header {
@@ -14,6 +14,7 @@
 
 .table__cell {
     padding: 8px;
+    text-align: left;
 }
 .container {
     position: absolute;
@@ -21,4 +22,7 @@
     left: 50%;
     margin-right: -50%;
     transform: translate(-50%, -50%)
+}
+.button{
+    margin-top: 4px;
 }

@@ -64,6 +64,7 @@ def home_page():
         # run home page
         return render_template('home.html', headers=header_infect)
     
+    # post method
     else:
         countyfrominput = request.form['county']
         return redirect(url_for("select_county", county=countyfrominput))
