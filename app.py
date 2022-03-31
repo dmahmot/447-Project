@@ -42,13 +42,14 @@ def my_request():
     data_infect = pd.read_csv(URL_INFECT)
     data_vaccine = pd.read_csv(URL_VACCINE)
 
-    # drop the OBJECTID column in CSV_INFECT
+    # drop the OBJECTID and Unknown columns in CSV_INFECT 
     data_infect = data_infect.drop('OBJECTID', axis=1)
+    data_infect = data_infect.drop('Unknown', axis=1)
 
     # store header names
     header_infect = data_infect.columns
     header_vaccine = data_vaccine.columns
-
+    
 
 @app.route('/', methods=('GET', 'POST'))
 def home_page():
@@ -144,11 +145,12 @@ def search_county_infected(county):
     :param county: string of the chosen county
     :return:
     """
+
     # attempt to find chosen county
     if county in header_infect:
         # if county is found, create new dataframe for just that county
         data_county = data_infect[['DATE', county]]
-
+                
         # remove NA entries of that county
         data_county = data_county.dropna()
 
