@@ -11,6 +11,11 @@ URL_TOTAL_POP = 'https://opendata.maryland.gov/api/views/r7ky-rq9s/rows.csv?acce
 CSV_INFECT = 'MD_COVID-19_-_Cases_by_County.csv'
 CSV_VACCINE = 'MD_COVID-19_-_Vaccinations_by_County.csv'
 
+URL_CURR_STATES = 'https://api.covidactnow.org/v2/states.csv?apiKey=fc20e15ab3024b65939c396e1c2f0761'
+URL_CURR_COUNTIES = 'https://api.covidactnow.org/v2/counties.csv?apiKey=fc20e15ab3024b65939c396e1c2f0761'
+URL_DATE_STATES = 'https://api.covidactnow.org/v2/states.timeseries.csv?apiKey=fc20e15ab3024b65939c396e1c2f0761'
+URL_DATE_COUNTIES = 'https://api.covidactnow.org/v2/counties.timeseries.csv?apiKey=fc20e15ab3024b65939c396e1c2f0761'
+
 # global variables
 data_infect = None
 data_vaccine = None
