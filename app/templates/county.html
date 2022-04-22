@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="container">
+        <h1> {{ county }}, {{ state }} Data </h1>
+        <table class="table">
+            <tr class="table__header">
+                {% for header in headings %}
+                <th class="table__cell">{{ header }}</th>
+                {% endfor %}
+            </tr>
+            {% for row in data %}
+            <tr class="table__row">
+                {% for cell in row %}
+                <td class="table__cell">{{ cell }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
+        <a href="/"> <button>Back to Home</button></a>
+        <br><br>
+        <a href="{{ url_for('select_county', state=state) }}"> <button>Back to {{ state }} County Selection</button></a>
+    </div>
+{% endblock %}
