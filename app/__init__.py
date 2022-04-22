@@ -202,10 +202,6 @@ def county_stats(query_results):
 
     # calculate statistics for chosen county
 
-    for x in query_results:
-        print(x['date'])
-        print('shit')
-
     if(len(query_results) != 0):
         cases_cumulative = query_results.pop()['cases']
         cases_last_7 = query_results.pop()['cases'] - query_results.pop(-7)['cases']
