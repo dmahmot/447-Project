@@ -106,11 +106,11 @@ def home_page():
     global hasBeenLaunched
 
     if request.method == 'GET':
-        # if not hasBeenLaunched:
+        if not hasBeenLaunched:
             # load dataframe from csv
-            # my_request()
-        print("making dummy stuff...")
-        list_states = ['nothing', 'temp']            
+            my_request()
+        # print("making dummy stuff...")
+        # list_states = ['nothing', 'temp']            
 
         # run home page, set headers to dropdown list options
         return render_template('home.html', states=list_states)
