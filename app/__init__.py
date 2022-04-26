@@ -256,6 +256,7 @@ def search_county(state, county):
         db_cursor.execute(""" SELECT * FROM covid
                                     WHERE state = ? AND  county = ?; """, (state, county))
 
+        # get all query results
         query_results = db_cursor.fetchall()
 
         # sort entries by date

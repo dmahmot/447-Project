@@ -2,3 +2,4 @@ venv
 instance
 counties.timeseries.csv
 *.pyc
+*.json
