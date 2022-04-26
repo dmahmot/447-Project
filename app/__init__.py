@@ -108,8 +108,9 @@ def home_page():
     if request.method == 'GET':
         if not hasBeenLaunched:
             # load dataframe from csv
-            print("calling my_request()...")
             my_request()
+        # print("making dummy stuff...")
+        # list_states = ['nothing', 'temp']            
 
         # run home page, set headers to dropdown list options
         return render_template('home.html', states=list_states)
@@ -255,6 +256,7 @@ def search_county(state, county):
         db_cursor.execute(""" SELECT * FROM covid
                                     WHERE state = ? AND  county = ?; """, (state, county))
 
+        # get all query results
         query_results = db_cursor.fetchall()
 
         # sort entries by date
