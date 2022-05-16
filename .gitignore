@@ -3,3 +3,5 @@ instance
 counties.timeseries.csv
 *.pyc
 *.json
+testmap.html
+testmap.py

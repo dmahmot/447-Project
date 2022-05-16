@@ -1,14 +1,14 @@
 """__init__.py: main application file"""
 
-from datetime import date
+from datetime import date, timedelta
 from distutils.command.build_scripts import first_line_re
 import os
 from numpy import true_divide
-# import requests             # used for downloading files from websites
 import pandas as pd         # used for csv
-from flask import *         # used for displaying website
+from flask import *
+from pytz import country_timezones         # used for displaying website
 from . import db
-import multiprocessing as mp
+import json
 
 # global constants
 URL_INFECT = 'https://opendata.maryland.gov/api/views/tm86-dujs/rows.csv?accessType=DOWNLOAD'
@@ -36,13 +36,10 @@ list_states = None
 headings = ('Category', 'Value')
 data = []
 
+statesJson = None
+countiesJson = None
+
 test_config = None
-
-
-#app = Flask(__name__)
-
-# secret_key needs to be set to use session - message flashing uses session
-#app.secret_key = "meaningless text"
 
 # create and configure the app
 app = Flask(__name__, instance_relative_config=True)
@@ -68,6 +65,46 @@ from . import db
 db.init_app(app)
 
 
+def fipsSort(obj):
+    return obj['fips']
+
+# query database and write to json file with data
+def writeDataToFiles():
+
+    global statesJson, countiesJson
+    db_cursor = db.get_db().cursor()
+
+    # load json files
+    f = open('states_data.json')
+    statesJson = json.load(f)
+    f.close()
+
+    f = open('counties_data.json')
+    countiesJson = json.load(f)
+    f.close()
+
+    # STILL NEED TO FIGURE OUT BETTER WAY TO GET MOST RECENT DATA FROM EACH COUNTY
+    # today = date.today()
+    # yesterday = str(today - timedelta(days=1))
+    
+    # get one row from each county, from the most recent date
+    db_cursor.execute(""" SELECT * FROM covid
+                                    WHERE date = ?; """, ("2022-04-12",))
+
+    # sort rows in order of fips codes
+    query_res = db_cursor.fetchall()
+    query_res.sort(key=fipsSort)
+
+    # update json dict with  data
+    for county in countiesJson["features"]:
+        row = query_res.pop();
+        county["properties"]["vaccinations"] = row['vaccinations']
+        county["properties"]["cases"] = row['cases']
+
+    # write json back to file with update data
+    with open('counties_data.json', 'w') as outfile:
+        json.dump(countiesJson, outfile)
+
 def my_request():
     """
     Downloads files from online database to populate dataframe
@@ -89,6 +126,8 @@ def my_request():
     list_states = pd.read_csv(URL_CURR_STATES, usecols=['state'])
     list_states = list_states['state'].to_numpy()
 
+    # load and write to json fileS, inserting data
+    writeDataToFiles();
 
     # get list of counties with their states
     list_counties = pd.read_csv(URL_CURR_COUNTIES, usecols=['state', 'county'])
@@ -103,17 +142,17 @@ def home_page():
     Link to home page
     :return:
     """
-    global hasBeenLaunched
+    global hasBeenLaunched, statesJson, countiesJson
 
     if request.method == 'GET':
-        # if not hasBeenLaunched:
+        if not hasBeenLaunched:
             # load dataframe from csv
-            # my_request()
-        print("making dummy stuff...")
-        list_states = ['nothing', 'temp']            
+            my_request()
+        # print("making dummy stuff...")
+        # list_states = ['nothing', 'temp']            
 
         # run home page, set headers to dropdown list options
-        return render_template('home.html', states=list_states)
+        return render_template('home.html', states=list_states, statesJson=statesJson, countiesJson=countiesJson)
     
     # post method
     else:
@@ -261,9 +300,6 @@ def search_county(state, county):
 
         # sort entries by date
         query_results.sort(key=dateKey)
-
-        # remove NA entries of that county
-        # data_county = data_county.dropna()
 
         county_stats(query_results)
 
