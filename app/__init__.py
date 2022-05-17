@@ -1,6 +1,6 @@
 """__init__.py: main application file"""
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from distutils.command.build_scripts import first_line_re
 import os
 from numpy import true_divide
@@ -83,28 +83,116 @@ def writeDataToFiles():
     countiesJson = json.load(f)
     f.close()
 
-    # STILL NEED TO FIGURE OUT BETTER WAY TO GET MOST RECENT DATA FROM EACH COUNTY
-    # today = date.today()
-    # yesterday = str(today - timedelta(days=1))
-    
-    # get one row from each county, from the most recent date
+    date_to_use = date(2022, 4, 12).isoformat()
+
+    # get one row from each county, from the most recent date - sorted by fips
     db_cursor.execute(""" SELECT * FROM covid
-                                    WHERE date = ?; """, ("2022-04-12",))
+                                    WHERE date = ? ORDER BY fips DESC; """, (str(date_to_use),))
 
     # sort rows in order of fips codes
     query_res = db_cursor.fetchall()
-    query_res.sort(key=fipsSort)
 
-    # update json dict with  data
+    # **** COUNTIES_DATA.JSON["FEATURES"] NEEDS TO BE SORTED 
+    #      BY "id" IN ORDER FOR THIS TO WORK **** 
+
+    # key - 5 digit "fips"
+    # val = list w/ 2 elements [vacc_data, cases data]
+    query_dict = {}
+
+    # store data in dictionary to transfer to json
+    for row in query_res:
+        row_id = str(row["fips"])
+        if len(row_id) == 4:
+            row_id = '0' + row_id
+
+        query_dict[row_id] = [row["vaccinations"], row["cases"]]
+    
+
+    # how many days in the past will we search if null data is found 
+    NULL_LIMIT = 3
+    
     for county in countiesJson["features"]:
-        row = query_res.pop();
-        county["properties"]["vaccinations"] = row['vaccinations']
-        county["properties"]["cases"] = row['cases']
 
-    # write json back to file with update data
-    with open('counties_data.json', 'w') as outfile:
-        json.dump(countiesJson, outfile)
+        num_times_null_vacc = 0
+        num_times_null_cases = 0
+        vacc_data = None
+        cases_data = None
 
+        county_key = county["id"]
+        dict_obj = query_dict.get(county_key)
+
+        # if there's no key error from dict 
+        if dict_obj:
+            vacc_data = dict_obj[0]
+            cases_data = dict_obj[1]
+        
+
+        # if vacc data is not null
+        if vacc_data:
+            county["properties"]["vaccinations"] = vacc_data
+
+        # search previous days for non null data
+        else:
+            # '0123-56-89' - capture the date we're using in a separate datetime variable
+            new_date = datetime(int(date_to_use[0:4]), int(date_to_use[5:7]), int(date_to_use[8:10]))
+
+            # loop until either non null data is found, or the limit we set to look for null data has been met
+            while (vacc_data is None) and (num_times_null_vacc < NULL_LIMIT):
+                # decrement day by 1 day
+                new_date = str((new_date - timedelta(days=1)))[0:10] 
+
+                # find non null data. searches for a row on the exact 'new_date' with the exact fips code
+                db_cursor.execute(""" SELECT * FROM covid
+                                                WHERE fips = ? AND date = ? LIMIT 1; """, (county['id'],new_date,))
+                # get the query result
+                temp_query_new_row = db_cursor.fetchone()                                                
+
+                # save vacc data from query result into variable
+                if temp_query_new_row:
+                    vacc_data = temp_query_new_row['vaccinations']
+                
+                # make 'new_date' a datetime object
+                new_date = datetime(int(new_date[0:4]), int(new_date[5:7]), int(new_date[8:10]))
+
+                num_times_null_vacc = num_times_null_vacc + 1
+
+            # once out of while loop, save vacc data to json variable
+            county["properties"]["vaccinations"] = vacc_data
+
+
+        # if case data is not null
+        if cases_data:
+            county["properties"]["cases"] = cases_data
+        
+        # search previous days for non null data
+        else:
+            # '0123-56-89' - capture the date we're using in a separate datetime variable
+            new_date = datetime(int(date_to_use[0:4]), int(date_to_use[5:7]), int(date_to_use[8:10]))
+
+            # loop until either non null data is found, or the limit we set to look for null data has been met
+            while (vacc_data is None) and (num_times_null_cases < NULL_LIMIT):
+                # decrement day by 1 day
+                new_date = str((new_date - timedelta(days=1)))[0:10] 
+
+                # find non null data. searches for a row on the exact 'new_date' with the exact fips code
+                db_cursor.execute(""" SELECT * FROM covid
+                                                WHERE fips = ? AND date = ? LIMIT 1; """, (county['id'],new_date,))
+                # get the query result
+                temp_query_new_row = db_cursor.fetchone()                                                
+
+                # save cases data from query result into variable
+                if temp_query_new_row:
+                    vacc_data = temp_query_new_row['cases']
+                
+                # make 'new_date' a datetime object
+                new_date = datetime(int(new_date[0:4]), int(new_date[5:7]), int(new_date[8:10]))
+
+                num_times_null_cases = num_times_null_cases + 1
+
+            # once out of while loop, save vacc data to json variable
+            county["properties"]["cases"] = cases_data
+
+    
 def my_request():
     """
     Downloads files from online database to populate dataframe
@@ -120,8 +208,6 @@ def my_request():
     # populate database
     data_master.to_sql("covid", db.get_db(), if_exists="replace", index=False)
     
-
-
     # get list of states
     list_states = pd.read_csv(URL_CURR_STATES, usecols=['state'])
     list_states = list_states['state'].to_numpy()
@@ -170,7 +256,6 @@ def select_county(state):
     if not hasBeenLaunched:
         print("redirecting to home.")
         return redirect(url_for('home_page'))
-
 
     db_cursor = db.get_db().cursor()
 
