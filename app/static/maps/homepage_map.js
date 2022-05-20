@@ -129,7 +129,7 @@ function onEachFeatureStates(feature, layer) {
   layer.on({
     mouseover: highlightFeatureStates,
     mouseout: resetHighlightStates,
-    // click: goto_state
+    click: zoomToFeature
   });
 }
 
@@ -137,7 +137,7 @@ function onEachFeatureCounties(feature, layer) {
   layer.on({
     mouseover: highlightFeatureCounties,
     mouseout: resetHighlightCounties,
-    // click: zoomToFeature
+    click: zoomToFeature
   });
 }
 

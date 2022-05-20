@@ -6,7 +6,7 @@ var countyClickedObj = null;
 
 var clicked_style_options = {
   weight: 7,
-  color: '#e40505',
+  color: '#0D6ECF',
   fillOpacity: .7
 };
 var highlighted_style_options = {
