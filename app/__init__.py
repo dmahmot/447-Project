@@ -2,13 +2,16 @@
 
 from datetime import date, timedelta, datetime
 from distutils.command.build_scripts import first_line_re
+from http.client import NETWORK_AUTHENTICATION_REQUIRED
 import os
+from tkinter import E
 from numpy import true_divide
 import pandas as pd         # used for csv
 from flask import *
 from pytz import country_timezones         # used for displaying website
 from . import db
 import json
+from . import state_abbr
 
 # global constants
 URL_INFECT = 'https://opendata.maryland.gov/api/views/tm86-dujs/rows.csv?accessType=DOWNLOAD'
@@ -31,7 +34,8 @@ data_infect = None
 data_vaccine = None
 
 list_counties = None
-list_states = None
+list_state_abbrev = None
+list_state_names = []
 
 headings = ('Category', 'Value')
 data = []
@@ -87,13 +91,10 @@ def writeDataToFiles():
 
     # get one row from each county, from the most recent date - sorted by fips
     db_cursor.execute(""" SELECT * FROM covid
-                                    WHERE date = ? ORDER BY fips DESC; """, (str(date_to_use),))
+                                    WHERE date = ?; """, (str(date_to_use),))
 
     # sort rows in order of fips codes
     query_res = db_cursor.fetchall()
-
-    # **** COUNTIES_DATA.JSON["FEATURES"] NEEDS TO BE SORTED 
-    #      BY "id" IN ORDER FOR THIS TO WORK **** 
 
     # key - 5 digit "fips"
     # val = list w/ 2 elements [vacc_data, cases data]
@@ -109,12 +110,25 @@ def writeDataToFiles():
     
 
     # how many days in the past will we search if null data is found 
-    NULL_LIMIT = 3
+    NULL_LIMIT = 14
+
+    # list to hold dates we'll search in case of null data (in 'xxxx-xx-xx' string form)
+    dates_list = []
+    # set new date as orig date to start
+    new_date = datetime(int(date_to_use[0:4]), int(date_to_use[5:7]), int(date_to_use[8:10]))
+
+    # fill list with dates to query
+    for x in range(NULL_LIMIT):
+        # decrement date
+        new_date = str((new_date - timedelta(days=1)))[0:10]
+        # add to list
+        dates_list.append(new_date)
+        # make 'new_date' a datetime object
+        new_date = datetime(int(new_date[0:4]), int(new_date[5:7]), int(new_date[8:10]))
     
+    # get data from dict and write to corresponding json feature
     for county in countiesJson["features"]:
 
-        num_times_null_vacc = 0
-        num_times_null_cases = 0
         vacc_data = None
         cases_data = None
 
@@ -125,73 +139,52 @@ def writeDataToFiles():
         if dict_obj:
             vacc_data = dict_obj[0]
             cases_data = dict_obj[1]
-        
+        else:
+            # try to find ANY data from recent past days from the county that is missing
+            db_cursor.execute(f'SELECT * FROM covid WHERE fips = {county_key} AND date IN {tuple(dates_list)} LIMIT {NULL_LIMIT};')
+            for row in db_cursor.fetchall():
+                if row: # if any data row is found
+                    vacc_data = row['vaccinations']
+                    cases_data = row['cases']
+                    break
 
         # if vacc data is not null
         if vacc_data:
             county["properties"]["vaccinations"] = vacc_data
 
-        # search previous days for non null data
+        # query db for the previous <?> number of days (use NULL_LIMIT for ?)
+        #   loop through results from most to least recent until non null data is found 
+        #   if not found, data will be set to null
         else:
-            # '0123-56-89' - capture the date we're using in a separate datetime variable
-            new_date = datetime(int(date_to_use[0:4]), int(date_to_use[5:7]), int(date_to_use[8:10]))
+            # query db
+            db_cursor.execute(f'SELECT * FROM covid WHERE fips = {county_key} AND date IN {tuple(dates_list)} LIMIT {NULL_LIMIT};')
 
-            # loop until either non null data is found, or the limit we set to look for null data has been met
-            while (vacc_data is None) and (num_times_null_vacc < NULL_LIMIT):
-                # decrement day by 1 day
-                new_date = str((new_date - timedelta(days=1)))[0:10] 
+            for row in db_cursor.fetchall():
+                # if not null, set json value and break loop
+                if row['vaccinations']:
+                    county['properties']['vaccinations'] = row['vaccinations']
+                    break
+                else: # set to null - oh well
+                    county['properties']['vaccinations'] = vacc_data
 
-                # find non null data. searches for a row on the exact 'new_date' with the exact fips code
-                db_cursor.execute(""" SELECT * FROM covid
-                                                WHERE fips = ? AND date = ? LIMIT 1; """, (county['id'],new_date,))
-                # get the query result
-                temp_query_new_row = db_cursor.fetchone()                                                
-
-                # save vacc data from query result into variable
-                if temp_query_new_row:
-                    vacc_data = temp_query_new_row['vaccinations']
-                
-                # make 'new_date' a datetime object
-                new_date = datetime(int(new_date[0:4]), int(new_date[5:7]), int(new_date[8:10]))
-
-                num_times_null_vacc = num_times_null_vacc + 1
-
-            # once out of while loop, save vacc data to json variable
-            county["properties"]["vaccinations"] = vacc_data
-
-
+                    
+            
         # if case data is not null
         if cases_data:
             county["properties"]["cases"] = cases_data
         
-        # search previous days for non null data
-        else:
-            # '0123-56-89' - capture the date we're using in a separate datetime variable
-            new_date = datetime(int(date_to_use[0:4]), int(date_to_use[5:7]), int(date_to_use[8:10]))
+        # same process as vacc data above
+        else: 
+            # query db
+            db_cursor.execute(f'SELECT * FROM covid WHERE fips = {county_key} AND date IN {tuple(dates_list)} LIMIT {NULL_LIMIT};')
 
-            # loop until either non null data is found, or the limit we set to look for null data has been met
-            while (vacc_data is None) and (num_times_null_cases < NULL_LIMIT):
-                # decrement day by 1 day
-                new_date = str((new_date - timedelta(days=1)))[0:10] 
-
-                # find non null data. searches for a row on the exact 'new_date' with the exact fips code
-                db_cursor.execute(""" SELECT * FROM covid
-                                                WHERE fips = ? AND date = ? LIMIT 1; """, (county['id'],new_date,))
-                # get the query result
-                temp_query_new_row = db_cursor.fetchone()                                                
-
-                # save cases data from query result into variable
-                if temp_query_new_row:
-                    vacc_data = temp_query_new_row['cases']
-                
-                # make 'new_date' a datetime object
-                new_date = datetime(int(new_date[0:4]), int(new_date[5:7]), int(new_date[8:10]))
-
-                num_times_null_cases = num_times_null_cases + 1
-
-            # once out of while loop, save vacc data to json variable
-            county["properties"]["cases"] = cases_data
-
+            for row in db_cursor.fetchall():
+                # if not null, set json value and break loop
+                if row['cases']:
+                    county['properties']['cases'] = row['cases']
+                    break
+                else:# set to null - oh well
+                    county["properties"]["cases"] = cases_data
     
 def my_request():
     """
@@ -199,7 +192,7 @@ def my_request():
     :return:
     """
     # make sure to use global variables instead of initializing new local ones
-    global data_master, data_infect, data_vaccine, list_states, list_counties, hasBeenLaunched
+    global data_master, data_infect, data_vaccine, list_state_abbrev, list_state_names, list_counties, hasBeenLaunched
 
     # only get the needed columns or else it would take too long to load the entire csv
     data_master = pd.read_csv(CSV_DATE_COUNTIES, usecols=['date', 'state', 'county', 'fips' , 'actuals.cases', 'actuals.vaccinationsCompleted'])
@@ -209,10 +202,15 @@ def my_request():
     data_master.to_sql("covid", db.get_db(), if_exists="replace", index=False)
     
     # get list of states
-    list_states = pd.read_csv(URL_CURR_STATES, usecols=['state'])
-    list_states = list_states['state'].to_numpy()
+    list_state_abbrev = pd.read_csv(URL_CURR_STATES, usecols=['state'])
+    list_state_abbrev = list_state_abbrev['state'].to_numpy()
 
-    # load and write to json fileS, inserting data
+    # converts from abbrev to name ("MD" -> "Maryland")
+    for state in list_state_abbrev:
+        if state != "MP":
+            list_state_names.append(state_abbr.states[state])
+
+    # load and write to json files, inserting data
     writeDataToFiles();
 
     # get list of counties with their states
@@ -238,7 +236,7 @@ def home_page():
         # list_states = ['nothing', 'temp']            
 
         # run home page, set headers to dropdown list options
-        return render_template('home.html', states=list_states, statesJson=statesJson, countiesJson=countiesJson)
+        return render_template('home.html', states=list_state_names, state_abbrev=list_state_abbrev, statesJson=statesJson, countiesJson=countiesJson)
     
     # post method
     else:
@@ -257,21 +255,15 @@ def select_county(state):
         print("redirecting to home.")
         return redirect(url_for('home_page'))
 
-    db_cursor = db.get_db().cursor()
+    # db_cursor = db.get_db().cursor()
 
     if request.method == 'GET':
         # get a list of counties specific to chosen state
-        state_counties = list_counties.loc[list_counties['state'] == state]
+        state_counties = list_counties.loc[list_counties['state'] == state_abbr.abrevs[state]]
         state_counties = state_counties['county'].to_numpy()
-
-        # get state db object
-        current_state_db = db_cursor.execute(""" SELECT * FROM covid
-                                         WHERE state = ?;  """, (state,))
-               
-
-
+                     
         # run search county page, set headers to dropdown list options
-        return render_template('select_county.html', state=state, counties=state_counties)
+        return render_template('select_county.html', state=state, state_abbrev=state_abbr.abrevs[state], counties=state_counties, statesJson=statesJson, countiesJson=countiesJson)
 
     # post method
     else:
@@ -279,11 +271,11 @@ def select_county(state):
         input_county = request.form['county']
 
         # search for chosen county
-        if (search_county(state, input_county) is None):
+        if (search_county(state_abbr.abrevs[state], input_county) is None):
             return redirect(url_for('county_error', county=input_county))
 
         # go to county dataframe page
-        return redirect(url_for('county', county=input_county, state=state))
+        return redirect(url_for('county', county=input_county, state=state, state_abbrev=state_abbr.abrevs[state]))
 
 
 @app.route('/get/county/<county>/<state>')
@@ -297,7 +289,7 @@ def county(county, state):
     if not hasBeenLaunched:
         return redirect(url_for('home_page'))
     
-    return render_template('county.html', headings=headings, data=data, county=county, state=state)
+    return render_template('county.html', headings=headings, data=data, county=county, state=state, statesJson=statesJson, countiesJson=countiesJson, state_abbrev=state_abbr.abrevs[state])
 
 
 @app.route('/county_error/<county>')

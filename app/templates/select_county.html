@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
+    <div id="map"> 
+        </div class="map_buttons">
+            <button onclick="resetMapView()">Reset To {{ state }} View</button>
+        </div>
+    </div>
     <div class="container">
         <h1> {{ state }} COVID-19 Dashboard </h1>
         <form action="#" method="post"> 
@@ -26,4 +31,16 @@
         <a href="/"> <button>Back to Home</button></a>
         
     </div>
+
+    <!-- stores geojson data for map into js variables. these are used in statepage_map.js -->
+    <script type="text/javascript">
+        // convert to javascript json object from html/jinja variable
+        var statesData = JSON.parse('{{ statesJson|tojson }}');
+        var countiesData = JSON.parse('{{ countiesJson|tojson }}');
+        var state_name = "{{ state }}";
+        var state_abbrev = "{{ state_abbrev }}";
+    </script>
+
+     <!-- main map code -->
+    <script type="text/javascript" src="/static/maps/statepage_map.js"></script>
 {% endblock %}
