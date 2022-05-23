@@ -8,7 +8,7 @@ from tkinter import E
 from numpy import true_divide
 import pandas as pd         # used for csv
 from flask import *
-from pytz import country_timezones         # used for displaying website
+from pytz import country_timezones         
 from . import db
 import json
 from . import state_abbr
@@ -218,7 +218,7 @@ def my_request():
     global data_master, data_infect, data_vaccine, list_state_abbrev, list_state_names, list_counties, hasBeenLaunched
 
     # only get the needed columns or else it would take too long to load the entire csv
-    data_master = pd.read_csv(CSV_DATE_COUNTIES, usecols=['date', 'state', 'county', 'fips' , 'actuals.cases', 'actuals.vaccinationsCompleted', 'cdcTransmissionLevel'])
+    data_master = pd.read_csv(URL_DATE_COUNTIES, usecols=['date', 'state', 'county', 'fips' , 'actuals.cases', 'actuals.vaccinationsCompleted', 'cdcTransmissionLevel'])
     data_master = data_master.rename(columns={'actuals.cases': 'cases', 'actuals.vaccinationsCompleted': 'vaccinations', 'cdcTransmissionLevel': 'transmission'})
        
     # populate database
@@ -237,7 +237,7 @@ def my_request():
     writeDataToFiles();
 
     # get list of counties with their states
-    list_counties = pd.read_csv(URL_CURR_COUNTIES, usecols=['state', 'county'])
+    list_counties = pd.read_csv(URL_DATE_COUNTIES, usecols=['state', 'county'])
 
     # set flag to true to indicate database is populated
     hasBeenLaunched = True

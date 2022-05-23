@@ -6,7 +6,8 @@ var baseLayer = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}
   id: 'mapbox/light-v9',
   tileSize: 512,
   zoomOffset: -1,
-  attribution: 'need to find'
+  attribution: 'https://www.openstreetmap.org/copyright © OpenStreetMap contributors'
+
 })
 
 // state layer
