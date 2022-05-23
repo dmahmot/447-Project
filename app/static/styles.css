@@ -1,6 +1,6 @@
 .table {
     border-spacing: 0;
-    margin: 1rem;
+    margin: 1rem auto;
     background-color: rgba(15, 142, 228, 0.8);
 }
 
@@ -18,11 +18,8 @@
 }
 
 .container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-right: -50%;
-    transform: translate(-50%, -50%)
+    margin: 25px auto;
+    text-align: center;
 }
 
 .button {
@@ -31,7 +28,7 @@
 
 #map {
     height: 50vh;
-    width: 60vw;
+    width: 70vw;
     margin: auto;
 }
 
@@ -53,4 +50,17 @@
 #reset_view_button {
     left: 50%;
     text-align: center;
+}
+
+.legend {
+    line-height: 18px;
+    color: #555;
+}
+
+.legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
 }

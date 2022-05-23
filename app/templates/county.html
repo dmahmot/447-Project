@@ -2,12 +2,9 @@
 
 {% block content %}
     
-    <div id="map"> 
-        </div class="map_buttons">
-            <button onclick="resetMapView()">Reset To {{ county }} View</button>
-        </div>
-    </div>
+    <div id="map"></div>
     <div class="container">
+        <i id="data_description"></i>
         <h1> {{ county }}, {{ state }} Data </h1>
         <table class="table">
             <tr class="table__header">
@@ -24,8 +21,9 @@
             {% endfor %}
         </table>
         <a href="/"> <button>Back to Home</button></a>
-        <br><br>
         <a href="{{ url_for('select_county', state=state) }}"> <button>Back to {{ state }}</button></a>
+        <button onclick="resetMapView()">Reset To {{ county }} View</button>
+
     </div>
 
     <!-- stores geojson data for map into js variables. these are used in countypage_map.js -->
@@ -35,6 +33,7 @@
         var countiesData = JSON.parse('{{ countiesJson|tojson }}');
         var state_name = "{{ state }}";
         var state_abbrev = "{{ state_abbrev }}";
+        var selected_county_fips = "{{ selected_county_fips }}";
     </script>
 
      <!-- main map code -->

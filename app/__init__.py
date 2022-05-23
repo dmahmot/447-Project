@@ -97,7 +97,7 @@ def writeDataToFiles():
     query_res = db_cursor.fetchall()
 
     # key - 5 digit "fips"
-    # val = list w/ 2 elements [vacc_data, cases data]
+    # val = list w/ 3 elements [vacc_data, cases_data, trans_data]
     query_dict = {}
 
     # store data in dictionary to transfer to json
@@ -106,7 +106,7 @@ def writeDataToFiles():
         if len(row_id) == 4:
             row_id = '0' + row_id
 
-        query_dict[row_id] = [row["vaccinations"], row["cases"]]
+        query_dict[row_id] = [row["vaccinations"], row["cases"], row["transmission"]]
     
 
     # how many days in the past will we search if null data is found 
@@ -128,9 +128,9 @@ def writeDataToFiles():
     
     # get data from dict and write to corresponding json feature
     for county in countiesJson["features"]:
-
         vacc_data = None
         cases_data = None
+        trans_data = None
 
         county_key = county["id"]
         dict_obj = query_dict.get(county_key)
@@ -139,6 +139,8 @@ def writeDataToFiles():
         if dict_obj:
             vacc_data = dict_obj[0]
             cases_data = dict_obj[1]
+            trans_data = dict_obj[2]
+
         else:
             # try to find ANY data from recent past days from the county that is missing
             db_cursor.execute(f'SELECT * FROM covid WHERE fips = {county_key} AND date IN {tuple(dates_list)} LIMIT {NULL_LIMIT};')
@@ -146,11 +148,13 @@ def writeDataToFiles():
                 if row: # if any data row is found
                     vacc_data = row['vaccinations']
                     cases_data = row['cases']
+                    trans_data = row['transmission']
                     break
 
         # if vacc data is not null
-        if vacc_data:
+        if vacc_data is not None:
             county["properties"]["vaccinations"] = vacc_data
+            
 
         # query db for the previous <?> number of days (use NULL_LIMIT for ?)
         #   loop through results from most to least recent until non null data is found 
@@ -158,7 +162,6 @@ def writeDataToFiles():
         else:
             # query db
             db_cursor.execute(f'SELECT * FROM covid WHERE fips = {county_key} AND date IN {tuple(dates_list)} LIMIT {NULL_LIMIT};')
-
             for row in db_cursor.fetchall():
                 # if not null, set json value and break loop
                 if row['vaccinations']:
@@ -170,14 +173,13 @@ def writeDataToFiles():
                     
             
         # if case data is not null
-        if cases_data:
+        if cases_data is not None:
             county["properties"]["cases"] = cases_data
         
         # same process as vacc data above
         else: 
             # query db
             db_cursor.execute(f'SELECT * FROM covid WHERE fips = {county_key} AND date IN {tuple(dates_list)} LIMIT {NULL_LIMIT};')
-
             for row in db_cursor.fetchall():
                 # if not null, set json value and break loop
                 if row['cases']:
@@ -185,7 +187,28 @@ def writeDataToFiles():
                     break
                 else:# set to null - oh well
                     county["properties"]["cases"] = cases_data
-    
+
+
+        # if transmission data is not null
+        if trans_data is not None:
+            county["properties"]["transmission"] = trans_data
+        
+        # same process as vacc data above
+        else: 
+            # query db
+            db_cursor.execute(f'SELECT * FROM covid WHERE fips = {county_key} AND date IN {tuple(dates_list)} LIMIT {NULL_LIMIT};')
+            for row in db_cursor.fetchall():
+                # if not null, set json value and break loop
+                if row['transmission']:
+                    county['properties']['transmission'] = row['transmission']
+                    break
+                else:# set to null - oh well
+                    county["properties"]["transmission"] = trans_data
+
+
+    with open('counties_data.json','w') as f:
+        f.write(json.dumps(countiesJson))
+
 def my_request():
     """
     Downloads files from online database to populate dataframe
@@ -195,8 +218,8 @@ def my_request():
     global data_master, data_infect, data_vaccine, list_state_abbrev, list_state_names, list_counties, hasBeenLaunched
 
     # only get the needed columns or else it would take too long to load the entire csv
-    data_master = pd.read_csv(CSV_DATE_COUNTIES, usecols=['date', 'state', 'county', 'fips' , 'actuals.cases', 'actuals.vaccinationsCompleted'])
-    data_master = data_master.rename(columns={'actuals.cases': 'cases', 'actuals.vaccinationsCompleted': 'vaccinations'})
+    data_master = pd.read_csv(CSV_DATE_COUNTIES, usecols=['date', 'state', 'county', 'fips' , 'actuals.cases', 'actuals.vaccinationsCompleted', 'cdcTransmissionLevel'])
+    data_master = data_master.rename(columns={'actuals.cases': 'cases', 'actuals.vaccinationsCompleted': 'vaccinations', 'cdcTransmissionLevel': 'transmission'})
        
     # populate database
     data_master.to_sql("covid", db.get_db(), if_exists="replace", index=False)
@@ -288,7 +311,7 @@ def county(county, state):
     
     if not hasBeenLaunched:
         return redirect(url_for('home_page'))
-    
+
     return render_template('county.html', headings=headings, data=data, county=county, state=state, statesJson=statesJson, countiesJson=countiesJson, state_abbrev=state_abbr.abrevs[state])
 
 
@@ -319,26 +342,47 @@ def county_stats(query_results):
 
     # calculate statistics for chosen county
 
+    # cases
     if(len(query_results) != 0):
         cases_cumulative = query_results.pop()['cases']
-        cases_last_7 = query_results.pop()['cases'] - query_results.pop(-7)['cases']
+        seven_days_old = query_results.pop(-7)['cases']
+        
+        if cases_cumulative and seven_days_old:
+            cases_last_7 = cases_cumulative - seven_days_old
+        else:
+            cases_cumulative = None
+            cases_last_7 = None
     else:
         cases_cumulative = None
         cases_last_7 = None
 
+    # vacc
     if(len(query_results) != 0):
         vac_cumulative = query_results.pop()['vaccinations']
-        vac_last_7 =  query_results.pop()['vaccinations'] - query_results.pop(-7)['vaccinations']
+        seven_days_old = query_results.pop(-7)['vaccinations']
+        
+        if vac_cumulative and seven_days_old:
+            vac_last_7 =  query_results.pop()['vaccinations'] - query_results.pop(-7)['vaccinations']
+        else:
+            vac_cumulative = None
+            vac_last_7 = None        
     else:
         vac_cumulative = None
         vac_last_7 = None
+        
+    # trans
+    if(len(query_results) != 0):
+        transmission_rate = query_results.pop()['transmission']
+    else:
+        transmission_rate = None
 
     # create table to be displayed
     data = [
         ('Cumulative cases', str(cases_cumulative)),
         ('Cases last 7 days', str(cases_last_7)),
         ('Cumulative vaccinations', str(vac_cumulative)),
-        ('Vaccinations last 7 days', str(vac_last_7))
+        ('Vaccinations last 7 days', str(vac_last_7)),
+        ('Transmission Level', str(transmission_rate))
     ]
 
 # sort function to use in search_county()

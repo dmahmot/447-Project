@@ -1,11 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div id="map"> 
-        </div class="map_buttons">
-            <button onclick="resetMapView()">Reset To {{ state }} View</button>
-        </div>
-    </div>
+    <div id="map"></div>
     <div class="container">
         <h1> {{ state }} COVID-19 Dashboard </h1>
         <form action="#" method="post"> 
@@ -28,7 +24,9 @@
             {% endfor %}
         </datalist>
         <br>
+        
         <a href="/"> <button>Back to Home</button></a>
+        <button onclick="resetMapView()">Reset To {{ state }} View</button>
         
     </div>
 

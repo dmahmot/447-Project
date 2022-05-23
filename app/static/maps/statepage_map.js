@@ -24,10 +24,10 @@ geojson_counties = L.geoJson(countiesData, {
 
 var map = L.map('map', {
   zoomSnap: .25,
-  layers: [baseLayer, geojson_states]
+  layers: [baseLayer, geojson_counties]
 }).setView([37.8, -96], 4);
 
-
+geojson_counties.bringToFront();
 var state_bounds = null;
 
 // finds the correct feature (state) that was clicked on, and returns the bounds of the state

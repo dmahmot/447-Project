@@ -211,7 +211,6 @@ function alaska() {
 
 map.on('moveend', function () {
   var cur_zoom_level = map.getZoom();
-  var cur_map_center = map.getCenter();
 
   if (alaska()) {
     if (cur_zoom_level > 3.2) { // zoomed in enough
@@ -233,25 +232,6 @@ map.on('moveend', function () {
 
 
 })
-
-// basic search bar
-// var geocoder = L.Control.geocoder({
-//     defaultMarkGeocode: false,
-//     collapsed: true
-// })
-// .on('markgeocode', function(e) {
-//     var bbox = e.geocode.bbox;
-//     // var poly = L.polygon([
-//     // bbox.getSouthEast(),
-//     // bbox.getNorthEast(),
-//     // bbox.getNorthWest(),
-//     // bbox.getSouthWest()
-//     // ]).addTo(map);
-//     // map.fitBounds(poly.getBounds());
-
-//     console.log("e.geocode: " +  e.geocode)
-// })
-// .addTo(map);
 
 
 var baseMaps = {

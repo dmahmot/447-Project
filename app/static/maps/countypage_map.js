@@ -5,9 +5,10 @@ var wasClicked = false;
 var countyClickedObj = null;
 
 var clicked_style_options = {
-  weight: 7,
-  color: '#0D6ECF',
-  fillOpacity: .7
+  weight: 5,
+  color: 'white',
+  fillOpacity: .6,
+  dashArray: '1 5 1 5'
 };
 var highlighted_style_options = {
   weight: 5,
@@ -19,34 +20,157 @@ var normal_style_options = {
   weight: 2,
   opacity: 1,
   color: 'white',
-  dashArray: '3',
+  dashArray: '',
   fillOpacity: 0.4
 };
 
-// base map layer
+/*************************************
+ * Geojson Layers
+ ************************************/
+
+// state layer
+geojson_states = L.geoJson(statesData, {
+  style: style_states,
+  onEachFeature: onEachFeatureStates,
+  interactive: true,
+  layer_name: "states",
+
+})
+
+// county layer cases
+geojson_counties_cases = L.geoJson(countiesData, {
+  style: style_cases,
+  onEachFeature: onEachFeatureCounties,
+  layer_name: "counties_cases"
+})
+
+// county layer vaccinations
+geojson_counties_vacc = L.geoJson(countiesData, {
+  style: style_vaccinations,
+  onEachFeature: onEachFeatureCounties,
+  layer_name: "counties_vacc"
+})
+
+// county layer transmission
+geojson_counties_trans = L.geoJson(countiesData, {
+  style: style_transmission,
+  onEachFeature: onEachFeatureCounties,
+  layer_name: "counties_trans"
+})
+
+// updated when cases/vacc/transmission data visualization is switched
+// checked when user zooms out to states and then back into counties to choose which data to display
+// starting layer is counties-cases
+var lastStatUp = geojson_counties_cases;
+
+
+// county layer (overlay)
+geojson_counties = L.geoJson(countiesData, {
+  // onEachFeature: onEachFeatureCounties
+  style: normal_style_options,
+  layer_name: "counties"
+})
+
+
+// static base map layer
 var baseLayer = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=' + mapboxAccessToken, {
   id: 'mapbox/light-v9',
   tileSize: 512,
   zoomOffset: -1,
-  attribution: 'need to find'
+  attribution: 'need to find',
+  layer_name: "baseLayer"
 })
 
-// state layer
-geojson_states = L.geoJson(statesData, {
-  style: style,
-  onEachFeature: onEachFeatureStates
-})
+// static states base layer
+var states_background_outline = L.geoJson(statesData, {
+  opacity: .5,
+  weight: 3,
+  color: 'black',
+  fillOpacity: 0,
+  layer_name: "states-background-outline"
+});
 
-// county layer
-geojson_counties = L.geoJson(countiesData, {
-  style: style,
-  onEachFeature: onEachFeatureCounties
-})
+// don't add this to map. just used for looping through all possible layers
+var geo_layers = L.layerGroup(geojson_states,
+  geojson_counties_cases,
+  geojson_counties_vacc,
+  geojson_counties);
+
+
+/* *****************************
+* Color Key (Legend)
+********************************/
+var legend_control_options = {
+  position: 'bottomright',
+};
+
+var vacc_legend = L.control(legend_control_options);
+var cases_legend = L.control(legend_control_options);
+var trans_legend = L.control(legend_control_options);
+
+/* *****************************
+* Color Key (Legend) Functions
+********************************/
+
+vacc_legend.onAdd = function (map) {
+
+  var div = L.DomUtil.create('div', 'info legend'),
+    grades = [1000, 5000, 50000, 250000, 1000000, 5000000]
+
+  // loop through our density intervals and generate a label with a colored square for each interval
+  for (var i = 0; i < grades.length; i++) {
+    div.innerHTML +=
+      '<i style="background:' + getColorVacc(grades[i] + 1) + '"></i> ' +
+      grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+  }
+
+  return div;
+};
+
+cases_legend.onAdd = function (map) {
+
+  var div = L.DomUtil.create('div', 'info legend'),
+    grades = [100, 200, 500, 1000, 2000, 5000, 10000]
+
+  // loop through our density intervals and generate a label with a colored square for each interval
+  for (var i = 0; i < grades.length; i++) {
+    div.innerHTML +=
+      // '<i style="background:' + getColorCases(grades[i] + 1) + '"></i> ' + grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '<');
+      '<i style="background:' + getColorCases(grades[i] + 1) + '"></i> ' + (grades[i + 1] ? grades[i] + '&ndash;' + grades[i + 1] + '<br>' : grades[i] + '>');
+  }
+
+  return div;
+};
+
+trans_legend.onAdd = function (map) {
+
+  var div = L.DomUtil.create('div', 'info legend'),
+    grades = [0, 1, 2, 3, 4],
+    labels = ['Low', 'Moderate', 'Substantial', 'High', 'Unknown']
+
+  div.innerHTML += 'Risk Level<br>';
+  // loop through our density intervals and generate a label with a colored square for each interval
+  for (var i = 0; i < grades.length; i++) {
+    div.innerHTML += '<i style="background:' + getColorTrans(grades[i]) + '"></i> ' + (grades[i] != null ? grades[i] + ' (' + labels[i] + ')<br>' : '');
+  }
+  return div;
+};
+
+/*************************************
+ * Map Definition
+ ************************************/
 
 var map = L.map('map', {
   zoomSnap: .25,
-  layers: [baseLayer, geojson_states]
+  layers: [baseLayer,]
 }).setView([37.8, -96], 4);
+
+geojson_counties_cases.addTo(map);
+states_background_outline.addTo(map);
+geojson_counties_cases.bringToFront();
+map.addControl(cases_legend);
+
+
 
 var state_bounds = null;
 
@@ -65,9 +189,42 @@ function getStateBounds() {
   }
 }
 
-map.fitBounds(getStateBounds());
+map.fitBounds(getStateBounds(), { animate: true });
 
-function getColor(d) {
+/*  
+BLUE
+#fff7fb  100
+#ece7f2   50 
+#d0d1e6   20
+#a6bddb   10
+#74a9cf    5
+#3690c0    2
+#0570b0    1
+#034e7b   <1
+
+PINK
+#f1eef6 0 
+#d7b5d8 1
+#df65b0 2
+#dd1c77 3 
+#980043 4
+*/
+
+
+// blue
+function getColorVacc(d) {
+  return d > 5000000 ? '#034e7b' :
+    d > 2500000 ? '#0570b0' :
+      d > 1000000 ? '#3690c0' :
+        d > 250000 ? '#74a9cf' :
+          d > 50000 ? '#a6bddb' :
+            d > 5000 ? '#d0d1e6' :
+              d > 1000 ? '#ece7f2' :
+                '#fff7fb';
+}
+
+// orangeish
+function getColorCases(d) {
   return d > 10000 ? '#800026' :
     d > 5000 ? '#BD0026' :
       d > 2000 ? '#E31A1C' :
@@ -78,20 +235,76 @@ function getColor(d) {
                 '#FFEDA0';
 }
 
-function style(feature) {
+// PINK
+function getColorTrans(d) {
+  return d == 0 ? '#d7b5d8' :
+    d == 1 ? '#df65b0' :
+      d == 2 ? '#dd1c77' :
+        d == 3 ? '#980043' :
+          '#f1eef6';
+}
+
+
+// orangeish
+function getColorStates(d) {
+  return d > 10000 ? '#800026' :
+    d > 5000 ? '#BD0026' :
+      d > 2000 ? '#E31A1C' :
+        d > 1000 ? '#FC4E2A' :
+          d > 500 ? '#FD8D3C' :
+            d > 200 ? '#FEB24C' :
+              d > 100 ? '#FED976' :
+                '#FFEDA0';
+}
+
+function style_states(feature) {
+  // console.log('orig states style set.');
+
   return {
-    fillColor: getColor(feature.properties.cases),
+    fillColor: "#cfebfd",
+    fillOpacity: .3,
     weight: 2,
     opacity: 1,
     color: 'white',
-    dashArray: '3',
+  };
+
+}
+
+function style_cases(feature) {
+  return {
+    fillColor: getColorCases(feature.properties.cases),
+    weight: 2,
+    opacity: 1,
+    color: 'white',
+    fillOpacity: 0.4
+  };
+}
+
+function style_vaccinations(feature) {
+  return {
+    fillColor: getColorVacc(feature.properties.vaccinations),
+    weight: 2,
+    opacity: 1,
+    color: 'white',
+    fillOpacity: 0.4
+  };
+}
+
+function style_transmission(feature) {
+  return {
+    fillColor: getColorTrans(feature.properties.transmission),
+    weight: 2,
+    opacity: 1,
+    color: 'white',
     fillOpacity: 0.4
   };
 }
 
 function highlightFeatureStates(e) {
 
-  if (!map.hasLayer(geojson_counties)) {
+  // console.log('geojson_states mouseover: ' + e.target.feature.properties.name);
+
+  if (!map.hasLayer(geojson_counties_cases) || !map.hasLayer(geojson_counties_vacc) || !map.hasLayer(geojson_counties_trans)) {
 
     var layer = e.target;
 
@@ -109,6 +322,9 @@ function highlightFeatureStates(e) {
 }
 
 function highlightFeatureCounties(e) {
+
+  // console.log('mouseover counties: ' + e.target.feature.properties.name);
+
   var layer = e.target;
   if (wasClicked && layer.feature.properties.name == countyClickedObj.feature.properties.name) {
     layer.setStyle(clicked_style_options);
@@ -123,22 +339,22 @@ function highlightFeatureCounties(e) {
     if (!wasClicked) {
       info.update(layer.feature.properties);
     }
+    else {
+      info.update(countyClickedObj.feature.properties);
+    }
   }
 }
 
 
 function countyClick(e) {
-
+  zoomToFeature(e);
   var layer = e.target;
+  // console.log('countyclick() - layer.feature.properties.name: ' + layer.feature.properties.name);
 
   // same county was clicked, unhighlight everything and set wasClicked to false
   if (wasClicked && countyClickedObj.feature.properties.name == layer.feature.properties.name) {
-
-
-
     // console.log(clickedCounties.getLayers());
-    console.log('same county clicked, removing ' + layer.feature.properties.name + ' from clicked group.')
-
+    // console.log('same county clicked, removing ' + layer.feature.properties.name + ' from clicked group.')
 
     wasClicked = false;
 
@@ -151,8 +367,9 @@ function countyClick(e) {
 
   wasClicked = true;
   countyClickedObj = layer;
-  console.log('countyClickedObj set as ' + countyClickedObj)
+  // console.log('countyClickedObj set as ' + countyClickedObj)
 
+  // console.log('manual reset highlight counties. : ' + layer.feature.properties.name);
   resetHighlightCounties(e);
 
 
@@ -169,7 +386,10 @@ function countyClick(e) {
 
 
 function resetHighlightStates(e) {
-  if (!map.hasLayer(geojson_counties)) {
+
+  // console.log('mouseout states: ' + e.target.feature.properties.name);
+
+  if (!map.hasLayer(geojson_counties_cases) || !map.hasLayer(geojson_counties_vacc) || !map.hasLayer(geojson_counties_vacc)) {
     geojson_states.resetStyle(e.target);
   }
   if (!wasClicked) {
@@ -179,7 +399,19 @@ function resetHighlightStates(e) {
 
 
 function resetHighlightCounties(e) {
-  geojson_counties.setStyle(normal_style_options);
+
+  // console.log('mouseout states: ' + e.target.feature.properties.name);
+
+
+  if (map.hasLayer(geojson_counties_cases)) {
+    geojson_counties_cases.setStyle(normal_style_options);
+  }
+  else if (map.hasLayer(geojson_counties_vacc)) {
+    geojson_counties_vacc.setStyle(normal_style_options);
+  }
+  else if (map.hasLayer(geojson_counties_trans)) {
+    geojson_counties_trans.setStyle(normal_style_options);
+  }
 
   if (wasClicked) {
     countyClickedObj.setStyle(clicked_style_options);
@@ -191,7 +423,8 @@ function resetHighlightCounties(e) {
 
 
 function zoomToFeature(e) {
-  map.fitBounds(e.target.getBounds());
+  map.fitBounds(e.target.getBounds(), { animate: true });
+  // console.log('zoomToFeature() - e.target.blah.name: ' + e.target.feature.properties.name);
 }
 
 function onEachFeatureStates(feature, layer) {
@@ -218,21 +451,32 @@ info.onAdd = function (map) {
   return this._div;
 };
 
+
 // method that we will use to update the control based on feature properties passed
 info.update = function (props) {
 
-  // county layer
-  if (map.hasLayer(geojson_counties)) {
+  var style_options = '';
+  // any of the county layers
+  if (map.hasLayer(geojson_counties_vacc) || map.hasLayer(geojson_counties_cases) || map.hasLayer(geojson_counties_trans)) {
+    style_options = 'font-weight:bold';
+    var clicked_style_options = 'text-transform:uppercase;font-weight:800;';
+
+    if (wasClicked) {
+      style_options += clicked_style_options;
+      // console.log('info.update. wasclicked=true - options: ' + style_options);
+    }
+
     this._div.innerHTML = (props ?
-      '<h4>' + props.name + ' County </h4>' + 'Cases: ' + props.cases + '<br>' +
-      'Vaccinations: ' + props.vaccinations
+      '<h4 style=' + style_options + '>' + props.name + ' County </h4>' + 'Cases: ' + props.cases + '<br>' +
+      'Vaccinations: ' + props.vaccinations + '<br>' + 'Transmission Level: ' + props.transmission
       : 'Hover over a County')
   }
 
   //state layer
   else {
+    style_options = 'font-weight:bold';
     this._div.innerHTML = (props ?
-      '<h4>' + props.name + '</h4>' + 'Click to view County Stats'
+      '<h4 style=' + style_options + '>' + props.name + '</h4>' + 'Click to view County Stats'
       : 'Click a state')
   }
 };
@@ -240,28 +484,47 @@ info.update = function (props) {
 info.addTo(map);
 
 function swapToStates() {
-  if (map.hasLayer(geojson_counties)) {
-    map.removeLayer(geojson_counties);
-    geojson_states.resetStyle();
 
+  // remove correct county layer
+  if (map.hasLayer(geojson_counties_vacc)) {
+    map.removeLayer(geojson_counties_vacc);
+    map.removeControl(vacc_legend);
   }
+  else if (map.hasLayer(geojson_counties_cases)) {
+    map.removeLayer(geojson_counties_cases);
+    map.removeControl(cases_legend);
+  }
+  else if (map.hasLayer(geojson_counties_trans)) {
+    map.removeLayer(geojson_counties_trans);
+    map.removeControl(trans_legend);
+  }
+
+  states_background_outline.resetStyle();
+  //add states layer
+  map.addLayer(geojson_states);
+  geojson_states.resetStyle();
+
 }
+
 
 function swapToCounties() {
   if (map.hasLayer(geojson_states)) {
-    // sets state outline to be grey instead of black, and slightly more bold
-    geojson_states.setStyle({
+
+    // add county layer
+    // console.log('adding lsatstat: ' + lastStatUp.options.layer_name)
+    map.addLayer(lastStatUp);
+
+    map.removeLayer(geojson_states);
+
+    states_background_outline.setStyle({
       weight: 10,
       color: '#808080',
-      dashArray: '',
-      fillOpacity: .6
-
     });
-    // add county layer
-    map.addLayer(geojson_counties);
+
   }
+
   // make sure counties are in front
-  geojson_counties.bringToFront();
+  lastStatUp.bringToFront();
 }
 
 
@@ -278,13 +541,15 @@ function alaska() {
   }
 }
 
-map.on('moveend', function () {
+map.on('moveend', function (e) {
   var cur_zoom_level = map.getZoom();
-  var cur_map_center = map.getCenter();
 
   if (alaska()) {
     if (cur_zoom_level > 3.2) { // zoomed in enough
-      swapToCounties();
+
+      if (!map.hasLayer(geojson_counties_cases) && !map.hasLayer(geojson_counties_vacc) && !map.hasLayer(geojson_counties_trans)) {
+        swapToCounties();
+      }
     }
     else { // not zoomed in enough
       swapToStates();
@@ -293,39 +558,93 @@ map.on('moveend', function () {
   // if not alaska
   else {
     if (cur_zoom_level > zoom_threshold) {
-      swapToCounties();
+      // if (!map.hasLayer(geojson_counties_cases) && !map.hasLayer(geojson_counties_vacc) && !map.hasLayer(geojson_counties_trans)) {
+      if (map.hasLayer(geojson_states)) {
+        swapToCounties();
+      }
     }
     else {
       swapToStates();
     }
+
+    // console.log('after moveend, lastStatUp: ' + lastStatUp.options.layer_name);
   }
-
-
 })
 
 
-
+// put cases and vacc here
 var baseMaps = {
-  "baseLayer": baseLayer,
-};
-
-var overlayMaps = {
-  "counties": geojson_counties,
-  "states": geojson_states
+  "Cases": geojson_counties_cases,
+  "Vaccinations": geojson_counties_vacc,
+  "Transmission Level": geojson_counties_trans
 };
 
 var control_options = {
-
   "collapsed": false,
   "hideSingleBase": true,
   "position": "bottomleft"
 }
 
-L.control.layers(baseMaps, overlayMaps, control_options).addTo(map);
+var layer_control = L.control.layers(baseMaps, null, control_options).addTo(map);
+
+var scale = L.control.scale({
+  position: 'bottomleft'
+}).addTo(map);
+
+
 
 function resetMapView() {
-  map.fitBounds(getStateBounds());
+  map.fitBounds(getStateBounds(), { animate: true });
 }
+
+
+map.on('layeradd', function (e) {
+
+  const layeradded = e.layer.options.layer_name;
+
+  // check which layer was added and save counties geojson obj in lastStatUp
+  lastStatUp = layeradded == "counties_cases" ? geojson_counties_cases :
+    layeradded == "counties_vacc" ? geojson_counties_vacc :
+      layeradded == "counties_trans" ? geojson_counties_trans :
+        layeradded == "counties" ? geojson_counties :
+          layeradded == "states" ? lastStatUp :
+            L.geoJson(null, { layer_name: "null_layer" });
+
+
+  map.removeControl(vacc_legend);
+  map.removeControl(cases_legend);
+  map.removeControl(trans_legend);
+
+
+  // add legend if county layer was added
+  var _legend = layeradded == "counties_vacc" ? vacc_legend :
+    layeradded == "counties_cases" ? cases_legend :
+      layeradded == "counties_trans" ? trans_legend :
+        null;
+
+  if (_legend) {
+    _legend.addTo(map);
+    // console.log('legend added');
+  }
+
+  var trans_desc = "<span >Transmission Level represents how transmissable COVID-19 has been in the specified region."
+  var cases_desc = "Cases is a cumulative total of reported COVID-19 cases from the specified region."
+  var vacc_desc = "Vaccinations is a cumulative total of reported COVID-19 completed vaccinations from the specified region."
+
+  var data_description = document.getElementById('data_description');
+  data_description.innerHTML = '';
+  data_description.innerHTML = map.hasLayer(geojson_counties_cases) ? cases_desc :
+    map.hasLayer(geojson_counties_trans) ? trans_desc :
+      map.hasLayer(geojson_counties_vacc) ? vacc_desc :
+        map.hasLayer(geojson_states) ? 'Zoom in to view county Data' :
+          '';
+
+});
+
+
+
+
+
 
 
 

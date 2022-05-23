@@ -8,5 +8,6 @@ CREATE TABLE covid (
   fips INTEGER NOT NULL,
   cases INTEGER,
   vaccinations INTEGER,
+  transmission INTEGER,
   PRIMARY KEY (fips, date)
 );
