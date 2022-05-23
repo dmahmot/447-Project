@@ -1,6 +1,6 @@
 .table {
     border-spacing: 0;
-    margin: 1rem;
+    margin: 1rem auto;
     background-color: rgba(15, 142, 228, 0.8);
 }
 
@@ -16,20 +16,19 @@
     padding: 8px;
     text-align: left;
 }
+
 .container {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-right: -50%;
-    transform: translate(-50%, -50%)
+    margin: 25px auto;
+    text-align: center;
 }
-.button{
+
+.button {
     margin-top: 4px;
 }
 
-#map{
-    height: 40vh;
-    width: 60vw;
+#map {
+    height: 50vh;
+    width: 70vw;
     margin: auto;
 }
 
@@ -37,11 +36,31 @@
     padding: 6px 8px;
     font: 14px/16px Arial, Helvetica, sans-serif;
     background: white;
-    background: rgba(255,255,255,0.8);
-    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     border-radius: 5px;
 }
+
 .info h4 {
     margin: 0 0 5px;
     color: #777;
+}
+
+/* doing nothing rn idk */
+#reset_view_button {
+    left: 50%;
+    text-align: center;
+}
+
+.legend {
+    line-height: 18px;
+    color: #555;
+}
+
+.legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
 }
