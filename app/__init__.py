@@ -218,7 +218,7 @@ def my_request():
     global data_master, data_infect, data_vaccine, list_state_abbrev, list_state_names, list_counties, hasBeenLaunched
 
     # only get the needed columns or else it would take too long to load the entire csv
-    data_master = pd.read_csv(URL_DATE_COUNTIES, usecols=['date', 'state', 'county', 'fips' , 'actuals.cases', 'actuals.vaccinationsCompleted', 'cdcTransmissionLevel'])
+    data_master = pd.read_csv(CSV_DATE_COUNTIES, usecols=['date', 'state', 'county', 'fips' , 'actuals.cases', 'actuals.vaccinationsCompleted', 'cdcTransmissionLevel'])
     data_master = data_master.rename(columns={'actuals.cases': 'cases', 'actuals.vaccinationsCompleted': 'vaccinations', 'cdcTransmissionLevel': 'transmission'})
        
     # populate database

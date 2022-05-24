@@ -347,7 +347,7 @@ function highlightFeatureCounties(e) {
 
 
 function countyClick(e) {
-  zoomToFeature(e);
+  // zoomToFeature(e);
   var layer = e.target;
   // console.log('countyclick() - layer.feature.properties.name: ' + layer.feature.properties.name);
 
