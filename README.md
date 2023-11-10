@@ -1,6 +1,14 @@
 # 447-Project
 Covid Dashboard Web App for CMSC 447
 
+
+## Launch Instructions
+From 447-Project directory, execute the following commands:
+- set FLASK_APP=app.py
+- set FLASK_ENV=development
+- flask run
+
+
   ## THE MAP
 
 Followed this tutorial - https://leafletjs.com/examples/choropleth/
